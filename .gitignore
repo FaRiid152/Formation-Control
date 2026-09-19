@@ -1,0 +1,6 @@
+# Microsoft PowerPoint presentations and temporary lock files
+*.pptx
+~$*.pptx
+
+# 3D controller is deferred while development focuses on 2D.
+formation controller/distance-based/3D/
