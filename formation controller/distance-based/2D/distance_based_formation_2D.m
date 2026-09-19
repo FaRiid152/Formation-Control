@@ -56,7 +56,9 @@ for graphIndex = 1:numel(graphNames)
     end
     fprintf('%-25s edges: %d\n', graphName, actualEdgeCount);
     caseFolder = fullfile(resultFolder, graphName);
-    mkdir(caseFolder);
+    if ~isfolder(caseFolder)
+        mkdir(caseFolder);
+    end
 
     [trajectory, edgeErrorHistory, edgePairs] = simulateFormation( ...
         initialPositions, desiredDistanceSquared, adjacency, Tfinal, dt, kGain);
@@ -273,6 +275,8 @@ function saveAnimation(caseFolder, trajectory, desiredPositions, adjacency, grap
     video.FrameRate = playbackRate/(dt*frameStride);
     video.Quality = videoQuality;
     open(video);
+    gifPath = fullfile(caseFolder, 'animation.gif');
+    gifDelay = dt*frameStride/playbackRate;
     figureHandle = figure('Visible','off','Color','w','Position',[100 100 960 540]);
     allPositions = [reshape(trajectory, [], 2); desiredPositions];
     limits = axisLimits(allPositions);
@@ -299,7 +303,16 @@ function saveAnimation(caseFolder, trajectory, desiredPositions, adjacency, grap
             1:size(trajectory,2), 'UniformOutput', false), 'Location','eastoutside', ...
             'FontSize', visualization.legendFontSize);
         set(gca, 'FontSize', visualization.fontSize, 'LineWidth', visualization.graphLineWidth);
-        writeVideo(video, getframe(figureHandle));
+        frame = getframe(figureHandle);
+        writeVideo(video, frame);
+        [indexedFrame, colorMap] = rgb2ind(frame2im(frame), 128);
+        if step == frameIndices(1)
+            imwrite(indexedFrame, colorMap, gifPath, 'gif', 'LoopCount', Inf, ...
+                'DelayTime', gifDelay);
+        else
+            imwrite(indexedFrame, colorMap, gifPath, 'gif', 'WriteMode', 'append', ...
+                'DelayTime', gifDelay);
+        end
     end
     close(video); close(figureHandle);
 end
@@ -331,7 +344,15 @@ end
 
 function resetResultFolder(resultFolder)
     if isfolder(resultFolder)
-        rmdir(resultFolder, 's');
+        generatedFiles = [dir(fullfile(resultFolder, '**', '*.fig')); ...
+            dir(fullfile(resultFolder, '**', '*.png')); ...
+            dir(fullfile(resultFolder, '**', '*.mp4')); ...
+            dir(fullfile(resultFolder, '**', '*.gif')); ...
+            dir(fullfile(resultFolder, '**', '*.avi'))];
+        for fileIndex = 1:numel(generatedFiles)
+            delete(fullfile(generatedFiles(fileIndex).folder, generatedFiles(fileIndex).name));
+        end
+    else
+        mkdir(resultFolder);
     end
-    mkdir(resultFolder);
 end
